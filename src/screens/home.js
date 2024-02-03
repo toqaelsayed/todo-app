@@ -1,21 +1,67 @@
-import React, { useState } from 'react';
-import { Text, TextInput, View, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Text, TextInput, View, TouchableOpacity, FlatList, StyleSheet, Alert, Dimensions } from 'react-native';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const HomeScreen = ({ navigation }) => {
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
-  const [todos, setTodos] = useState("");
+  const [todos, setTodos] = useState([]);
+  const [completedTodos, setCompletedTodos] = useState([]);
+  const [windowDimensions, setWindowDimensions] = useState(Dimensions.get('window'));
+
+  useEffect(() => {
+    const handleDimensionChange = ({ window }) => {
+      Alert.alert(
+        'Window Dimensions Changed',
+        `Width: ${window.width}, Height: ${window.height}`,
+        [{ text: 'OK', onPress: () => console.log('OK Pressed') }]
+      );
+    };
+
+    Dimensions.addEventListener('change', handleDimensionChange);
+
+    return () => {
+      Dimensions.removeEventListener('change', handleDimensionChange);
+    };
+  }, []); 
   const addTask = () => {
     if (taskTitle && taskDescription) {
-      const newTodo = {
-        title: taskTitle,
-        description: taskDescription,
-      };
-      setTodos((prevTodos) => [...prevTodos, newTodo]);
-      setTaskTitle('');
-      setTaskDescription('');
+      if (!todos.find((todo) => todo.title === taskTitle)) {
+        const newTodo = {
+          title: taskTitle,
+          description: taskDescription,
+          completed: false,
+        };
+        setTodos((prevTodos) => [...prevTodos, newTodo]);
+        setTaskTitle('');
+        setTaskDescription('');
+      } else {
+        alert('Todo with the same title already exists!');
+      }
     }
   };
+
+  const toggleComplete = (title) => {
+    setTodos((prevTodos) => {
+      const updatedTodos = prevTodos.map((todo) =>
+        todo.title === title ? { ...todo, completed: !todo.completed } : todo
+      );
+      return updatedTodos;
+    });
+
+    const completedTodo = todos.find((todo) => todo.title === title && !todo.completed);
+    if (completedTodo) {
+      setCompletedTodos((prevCompletedTodos) => [...prevCompletedTodos, completedTodo]);
+    }
+  };
+
+  const removeTask = (title) => {
+    setTodos((prevTodos) => prevTodos.filter((todo) => todo.title !== title));
+    setCompletedTodos((prevCompletedTodos) =>
+      prevCompletedTodos.filter((todo) => todo.title !== title)
+    );
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>TODO App</Text>
@@ -37,19 +83,34 @@ const HomeScreen = ({ navigation }) => {
       <FlatList
         data={todos}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.item}
-            onPress={() => navigation.navigate('Details', { todo: item })}
-          >
-            <Text style={styles.title}>{item.title}</Text>
-            <Text>{item.description}</Text>
-          </TouchableOpacity>
+          <View style={styles.item}>
+            <TouchableOpacity style={styles.iconContainer} onPress={() => toggleComplete(item.title)}>
+              <Icon
+                name={item.completed ? 'check-circle' : 'circle'}
+                size={20}
+                color={item.completed ? 'green' : 'black'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Details', { todo: item })}
+              style={styles.contentContainer}
+            >
+              <View>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text>{item.description}</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconContainer} onPress={() => removeTask(item.title)}>
+              <Icon name="trash" size={20} color="red" />
+            </TouchableOpacity>
+          </View>
         )}
         keyExtractor={(item) => item.title}
       />
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
@@ -83,6 +144,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#BBE2EC',
     marginVertical: 10,
     marginHorizontal: 10,
@@ -90,6 +154,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  iconContainer: {
+    flexDirection: 'row',
+    padding:10
+
+  },
+  contentContainer: {
+    flex: 1,
+    marginLeft: 10,
   },
 });
 
