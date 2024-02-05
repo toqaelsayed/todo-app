@@ -1,44 +1,42 @@
+// Import necessary libraries and components
 import React, { useState, useEffect } from 'react';
-import { Text, TextInput, View, TouchableOpacity, FlatList, StyleSheet, Alert, Dimensions } from 'react-native';
+import { Text, View, TouchableOpacity, FlatList, StyleSheet, Alert, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import TodoForm from '../components/todoForm';
+import { useDispatch } from 'react-redux';
+import { addCompletedTodo, removeCompletedTodo } from '../redux/slices/slice.completedTodos';
+import { addUncompletedTodo, removeUncompletedTodo } from '../redux/slices/slice.uncompletedTodos';
 
+// Define HomeScreen component
 const HomeScreen = ({ navigation }) => {
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskDescription, setTaskDescription] = useState('');
   const [todos, setTodos] = useState([]);
-  const [completedTodos, setCompletedTodos] = useState([]);
   const [windowDimensions, setWindowDimensions] = useState(Dimensions.get('window'));
+  const [alertShown, setAlertShown] = useState(false);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const handleDimensionChange = ({ window }) => {
-      Alert.alert(
-        'Window Dimensions Changed',
-        `Width: ${window.width}, Height: ${window.height}`,
-        [{ text: 'OK', onPress: () => console.log('OK Pressed') }]
-      );
+      if (!alertShown) {
+        Alert.alert(
+          'Window Dimensions Changed',
+          `Width: ${window.width}, Height: ${window.height}`,
+          [{ text: 'OK', onPress: () => console.log('OK Pressed') }]
+        );
+        setAlertShown(true);
+      }
     };
+
 
     Dimensions.addEventListener('change', handleDimensionChange);
 
     return () => {
       Dimensions.removeEventListener('change', handleDimensionChange);
     };
-  }, []); 
-  const addTask = () => {
-    if (taskTitle && taskDescription) {
-      if (!todos.find((todo) => todo.title === taskTitle)) {
-        const newTodo = {
-          title: taskTitle,
-          description: taskDescription,
-          completed: false,
-        };
-        setTodos((prevTodos) => [...prevTodos, newTodo]);
-        setTaskTitle('');
-        setTaskDescription('');
-      } else {
-        alert('Todo with the same title already exists!');
-      }
-    }
+  }, []);
+
+  const addTask = (task) => {
+    setTodos((prevTodos) => [...prevTodos, task]);
+    dispatch(addUncompletedTodo(task)); // Dispatch the action to add uncompleted todo to the Redux store
   };
 
   const toggleComplete = (title) => {
@@ -46,40 +44,38 @@ const HomeScreen = ({ navigation }) => {
       const updatedTodos = prevTodos.map((todo) =>
         todo.title === title ? { ...todo, completed: !todo.completed } : todo
       );
-      return updatedTodos;
+  
+      const todoToToggle = updatedTodos.find((todo) => todo.title === title);
+  
+      if (todoToToggle) {
+        if (todoToToggle.completed) {
+          // Dispatch the action to remove from uncompleted and add to completed
+          dispatch(removeUncompletedTodo(todoToToggle));
+          dispatch(addCompletedTodo({ ...todoToToggle, completed: true }));
+        } else {
+          // Dispatch the action to remove from completed and add to uncompleted
+          dispatch(removeCompletedTodo(todoToToggle));
+          dispatch(addUncompletedTodo({ ...todoToToggle, completed: false }));
+        }
+  
+        return updatedTodos;
+      }
+  
+      return prevTodos;
     });
-
-    const completedTodo = todos.find((todo) => todo.title === title && !todo.completed);
-    if (completedTodo) {
-      setCompletedTodos((prevCompletedTodos) => [...prevCompletedTodos, completedTodo]);
-    }
   };
+  
 
   const removeTask = (title) => {
     setTodos((prevTodos) => prevTodos.filter((todo) => todo.title !== title));
-    setCompletedTodos((prevCompletedTodos) =>
-      prevCompletedTodos.filter((todo) => todo.title !== title)
-    );
+    dispatch(removeUncompletedTodo({ title })); // Dispatch the action to remove uncompleted todo from the Redux store
+    dispatch(removeCompletedTodo({ title })); // Dispatch the action to remove completed todo from the Redux store
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>TODO App</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter Task Title"
-        value={taskTitle}
-        onChangeText={(text) => setTaskTitle(text)}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Enter Task Description"
-        value={taskDescription}
-        onChangeText={(text) => setTaskDescription(text)}
-      />
-      <TouchableOpacity style={styles.addButton} onPress={addTask}>
-        <Text style={styles.buttonText}>Add Task</Text>
-      </TouchableOpacity>
+      <TodoForm todos={todos} onAddTask={addTask} />
       <FlatList
         data={todos}
         renderItem={({ item }) => (
@@ -111,7 +107,6 @@ const HomeScreen = ({ navigation }) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -122,26 +117,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-  },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginBottom: 16,
-    paddingLeft: 8,
-  },
-  addButton: {
-    backgroundColor: 'pink',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    marginHorizontal: 50,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   item: {
     flexDirection: 'row',
@@ -157,8 +132,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     flexDirection: 'row',
-    padding:10
-
+    padding: 10,
   },
   contentContainer: {
     flex: 1,

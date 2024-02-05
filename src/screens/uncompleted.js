@@ -2,9 +2,10 @@
 import React from 'react';
 import { Text, View, StyleSheet, FlatList } from 'react-native';
 import { useSelector } from 'react-redux';
+import { removeUncompletedTodo } from '../redux/slices/slice.uncompletedTodos'; // Import the action
 
-const CompletedTasks = () => {
-  const completedTodos = useSelector((state) => state.completedTodo.completedTodos);
+const ToDoComponent = () => {
+    const uncompletedTodos = useSelector((state) => state.uncompletedTodo.uncompletedTodos);
 
   const renderItem = ({ item }) => (
     <View style={styles.item}>
@@ -15,10 +16,10 @@ const CompletedTasks = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Completed Tasks</Text>
-      {completedTodos.length > 0 ? (
+      <Text style={styles.heading}>uncompleted Todos</Text>
+      {uncompletedTodos.length > 0 ? (
         <FlatList
-          data={completedTodos}
+          data={uncompletedTodos}
           renderItem={renderItem}
           keyExtractor={(item) => item.title}
         />
@@ -48,4 +49,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CompletedTasks;
+export default ToDoComponent;

@@ -12,6 +12,7 @@ const HomeStack = () => {
       <Stack.Screen name="HomeScreen" component={HomeScreen}  />
       <Stack.Screen name="Details" component={DetailsScreen} />
       <Stack.Screen name="completed" component={CompletedTodosScreen} />
+
     </Stack.Navigator>
   );
 };
